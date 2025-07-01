@@ -25,7 +25,7 @@ def scrape_jurusan_all():
     base_url = "https://pddikti.kemdiktisaintek.go.id/program-studi?page="
     all_data = []
 
-    for page in range(1, 1000):  # batas aman hingga 1000 halaman
+    for page in range(1, 1000):
         url = f"{base_url}{page}"
         r = requests.get(url)
         soup = BeautifulSoup(r.text, "html.parser")
@@ -38,8 +38,9 @@ def scrape_jurusan_all():
             title = card.find("h5")
             if title:
                 nama_jurusan = title.text.strip()
-                desc = card.find("p").text.strip() if card.find("p") else "Deskripsi tidak tersedia"
-                all_data.append({"nama": nama_jurusan, "deskripsi": desc})
+                desc = card.find("p").text.strip() if card.find("p") else ""
+                if len(desc) >= 5:
+                    all_data.append({"nama": nama_jurusan, "deskripsi": desc})
 
     return all_data
 
@@ -53,9 +54,18 @@ def init_model():
 model = init_model()
 
 jurusan_vectors = []
+valid_jurusan = []
+
 for jurusan in jurusan_list:
-    embed = model.encode(jurusan['deskripsi'])
-    jurusan_vectors.append(embed)
+    try:
+        desc = jurusan['deskripsi'].strip()
+        if len(desc) < 5:
+            continue
+        embed = model.encode(desc)
+        jurusan_vectors.append(embed)
+        valid_jurusan.append(jurusan)
+    except Exception as e:
+        continue
 
 jurusan_vectors = np.vstack(jurusan_vectors).astype('float32')
 index = faiss.IndexFlatL2(jurusan_vectors.shape[1])
@@ -95,7 +105,6 @@ if uploaded_file:
     D, I = index.search(combined_vector, k=5)
     st.subheader("🎯 Rekomendasi Jurusan untuk Anda:")
     for i in I[0]:
-        jurusan = jurusan_list[i]
+        jurusan = valid_jurusan[i]
         st.markdown(f"**{jurusan['nama']}**  ")
         st.caption(jurusan['deskripsi'])
-
