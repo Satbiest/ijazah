@@ -3,7 +3,7 @@ import easyocr
 import tempfile
 import re
 
-st.title("📄 Ekstraksi Otomatis Nilai dari Ijazah (Tanpa Pola Tetap)")
+st.title("📄 Ekstraksi Nilai Ijazah (Otomatis + Koreksi Kesalahan OCR)")
 
 uploaded_file = st.file_uploader("Upload Gambar Ijazah (JPG/PNG)", type=["jpg", "jpeg", "png"])
 
@@ -36,16 +36,22 @@ if uploaded_file:
     for line in result:
         line = line.strip()
         # Cari baris yang mengandung teks + angka
-        match = re.search(r'([A-Za-z\s\.\-]+)[^\d]*([0-9]{2,4}[,.]?[0-9]{0,2})', line)
+        match = re.search(r'([A-Za-z\s\.\-]+)[^\d]*([0-9]{2,6}[,.]?[0-9]{0,2})', line)
         if match:
             nama_mapel = match.group(1).strip().title()
-            nilai = match.group(2).replace(',', '.')
+            nilai_raw = match.group(2).replace(',', '.')
+
             try:
-                nilai = float(nilai)
-                if 0 <= nilai <= 100:  # nilai wajar
-                    nilai_dict[nama_mapel] = nilai
+                nilai_float = float(nilai_raw)
+
+                # Koreksi jika nilai sangat besar (misalnya 8129 → 81.29)
+                if nilai_float > 100 and len(str(int(nilai_float))) >= 4:
+                    nilai_float = float(str(int(nilai_float))[:2] + "." + str(int(nilai_float))[2:])
+
+                if 0 <= nilai_float <= 100:
+                    nilai_dict[nama_mapel] = round(nilai_float, 2)
             except:
-                pass
+                continue
 
     if nilai_dict:
         for mapel, nilai in nilai_dict.items():
