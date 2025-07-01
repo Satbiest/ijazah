@@ -1,29 +1,31 @@
+import streamlit as st
 import easyocr
-import fitz  # pip install pymupdf
-import docx2txt
-from PIL import Image
+import tempfile
 import numpy as np
 import re
-import tempfile
-import streamlit as st
+from pdf2image import convert_from_path
+import os
+
+st.title("📄 Ekstraksi Nilai dari Ijazah PDF/Gambar")
+
+uploaded_file = st.file_uploader("Upload Ijazah (PDF/Gambar)", type=["pdf", "jpg", "png"])
 
 reader = easyocr.Reader(['id'])
-
-uploaded_file = st.file_uploader("Upload Ijazah (pdf, docx, jpg, png)", type=["pdf", "docx", "jpg", "png"])
 
 def extract_text_from_image(path):
     result = reader.readtext(path, detail=0)
     return "\n".join(result)
 
 def extract_text_from_pdf(path):
-    doc = fitz.open(path)
+    # Konversi semua halaman PDF ke gambar
+    images = convert_from_path(path)
     text_result = []
-    for page in doc:
-        text_result.append(page.get_text())
+    for page_img in images:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_img_file:
+            page_img.save(temp_img_file.name, "JPEG")
+            ocr_result = extract_text_from_image(temp_img_file.name)
+            text_result.append(ocr_result)
     return "\n".join(text_result)
-
-def extract_text_from_docx(path):
-    return docx2txt.process(path)
 
 if uploaded_file:
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
@@ -32,19 +34,14 @@ if uploaded_file:
 
     st.info("🔍 Sedang memproses teks dengan OCR...")
 
-    if uploaded_file.name.endswith(".jpg") or uploaded_file.name.endswith(".png"):
-        text = extract_text_from_image(file_path)
-    elif uploaded_file.name.endswith(".pdf"):
+    if uploaded_file.name.endswith(".pdf"):
         text = extract_text_from_pdf(file_path)
-    elif uploaded_file.name.endswith(".docx"):
-        text = extract_text_from_docx(file_path)
     else:
-        st.error("Format file tidak didukung.")
-        st.stop()
+        text = extract_text_from_image(file_path)
 
     st.text_area("📄 Teks yang berhasil diekstrak:", text, height=300)
 
-    # Ekstrak nilai (Matematika, Fisika, dll)
+    # Ekstraksi nilai mapel
     nilai_mapel = {}
     for line in text.splitlines():
         match = re.search(r'(Matematika|Fisika|Kimia|Biologi|B\.?Indonesia|B\.?Inggris)[^0-9]*([0-9]{2,3})', line, re.IGNORECASE)
