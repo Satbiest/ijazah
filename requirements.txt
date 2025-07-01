@@ -7,3 +7,5 @@ beautifulsoup4
 opencv-python-headless
 pymupdf
 docx2txt
+pdf2image 
+pillow
