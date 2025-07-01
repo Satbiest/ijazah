@@ -1,12 +1,10 @@
-# Rekomendasi Jurusan WebApp: Minat + Upload Ijazah (Scrape Semua PDDikti)
-# Dependencies: pip install streamlit easyocr sentence-transformers faiss-cpu requests beautifulsoup4 opencv-python-headless
+# Rekomendasi Jurusan WebApp: Minat + Upload Ijazah (LLM List of Jurusan Indonesia)
+# Dependencies: pip install streamlit easyocr sentence-transformers faiss-cpu requests opencv-python-headless
 
 import streamlit as st
 import easyocr
 import tempfile
 import numpy as np
-import requests
-from bs4 import BeautifulSoup
 from sentence_transformers import SentenceTransformer
 import faiss
 import re
@@ -19,37 +17,33 @@ minat_user = st.text_area("Tulis minat, keahlian, atau hobi kamu:", "Saya suka m
 
 uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah Anda (format: .pdf/.docx)", type=["pdf", "docx"])
 
-# --- 2. Ambil Semua Data Jurusan dari PDDikti (Scrape Per Halaman) ---
-@st.cache_data(ttl=86400)
-def scrape_jurusan_all():
-    base_url = "https://pddikti.kemdiktisaintek.go.id/program-studi?page="
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-    }
-    all_data = []
-
-    for page in range(1, 20):  # Batasi sampai 20 halaman dulu
-        url = f"{base_url}{page}"
-        r = requests.get(url, headers=headers)
-        soup = BeautifulSoup(r.text, "html.parser")
-        items = soup.find_all("div", class_="card-body")
-
-        if not items:
-            break
-
-        for card in items:
-            title = card.find("h5")
-            if title:
-                nama_jurusan = title.text.strip()
-                desc = card.find("p").text.strip() if card.find("p") else ""
-                if len(desc) >= 5:
-                    all_data.append({"nama": nama_jurusan, "deskripsi": desc})
-
-    return all_data
-
-jurusan_list = scrape_jurusan_all()
-st.write(f"Jumlah jurusan berhasil diambil: {len(jurusan_list)}")
-st.json(jurusan_list[:5])
+# --- 2. Daftar Jurusan dari LLM (Disusun manual atau hasil dari model LLM yang sudah dimurnikan) ---
+jurusan_list = [
+    {"nama": "Teknik Informatika", "deskripsi": "Mempelajari pemrograman, pengembangan perangkat lunak, dan sistem komputer."},
+    {"nama": "Sistem Informasi", "deskripsi": "Mengkaji pengelolaan informasi berbasis teknologi dan bisnis."},
+    {"nama": "Teknik Elektro", "deskripsi": "Mempelajari prinsip listrik, elektronika, dan sistem kendali."},
+    {"nama": "Teknik Mesin", "deskripsi": "Ilmu teknik yang fokus pada desain dan produksi mesin."},
+    {"nama": "Teknik Sipil", "deskripsi": "Berhubungan dengan pembangunan infrastruktur seperti jalan, jembatan, dan gedung."},
+    {"nama": "Kedokteran", "deskripsi": "Ilmu medis dan praktik pengobatan terhadap manusia."},
+    {"nama": "Farmasi", "deskripsi": "Ilmu mengenai obat-obatan, pengolahannya, dan penggunaannya."},
+    {"nama": "Keperawatan", "deskripsi": "Fokus pada pelayanan kesehatan dan perawatan pasien."},
+    {"nama": "Psikologi", "deskripsi": "Ilmu tentang perilaku dan mental manusia."},
+    {"nama": "Hukum", "deskripsi": "Mempelajari sistem hukum, peraturan, dan penerapannya di masyarakat."},
+    {"nama": "Ilmu Komunikasi", "deskripsi": "Fokus pada penyampaian informasi dan media massa."},
+    {"nama": "Manajemen", "deskripsi": "Ilmu pengelolaan organisasi, SDM, dan keuangan."},
+    {"nama": "Akuntansi", "deskripsi": "Ilmu mencatat, mengelola, dan menganalisis transaksi keuangan."},
+    {"nama": "Ekonomi Pembangunan", "deskripsi": "Mempelajari aspek ekonomi makro dan mikro dalam pembangunan."},
+    {"nama": "Pendidikan Guru Sekolah Dasar", "deskripsi": "Mempersiapkan calon guru SD yang profesional."},
+    {"nama": "Pendidikan Matematika", "deskripsi": "Mengajarkan dan memahami konsep matematika untuk pendidikan."},
+    {"nama": "Sastra Indonesia", "deskripsi": "Ilmu bahasa dan kesusastraan Indonesia."},
+    {"nama": "Sastra Inggris", "deskripsi": "Mempelajari bahasa, sastra, dan budaya Inggris."},
+    {"nama": "Desain Komunikasi Visual", "deskripsi": "Fokus pada desain grafis, komunikasi visual, dan estetika."},
+    {"nama": "Arsitektur", "deskripsi": "Perencanaan dan perancangan bangunan dan lingkungan binaan."},
+    {"nama": "Agroteknologi", "deskripsi": "Ilmu pertanian modern, budidaya, dan teknologi pangan."},
+    {"nama": "Peternakan", "deskripsi": "Fokus pada produksi, perawatan, dan manajemen hewan ternak."},
+    {"nama": "Perikanan", "deskripsi": "Mempelajari pengelolaan sumber daya ikan dan kelautan."},
+    {"nama": "Ilmu Gizi", "deskripsi": "Ilmu nutrisi dan hubungannya dengan kesehatan manusia."},
+]
 
 # --- 3. Load NLP Model & Proses Jurusan ke Vector ---
 @st.cache_resource
