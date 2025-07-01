@@ -1,1 +1,8 @@
+streamlit
+easyocr
+sentence-transformers
+faiss-cpu
+requests
+beautifulsoup4
+opencv-python-headless
 
