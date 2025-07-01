@@ -7,41 +7,39 @@ st.title("📄 Ekstraksi Nilai Mata Pelajaran dari Ijazah")
 
 uploaded_file = st.file_uploader("Upload Gambar Ijazah (JPG/PNG)", type=["jpg", "jpeg", "png"])
 
-# Cleaning text OCR
 def clean_text_list(text_lines):
+    """Bersihkan daftar teks dari OCR."""
     return [t.strip() for t in text_lines if t.strip() != ""]
 
-# Ekstraksi mapel dan nilai (tanpa keyword)
 def extract_mapel_nilai(text_lines):
     hasil = []
     gabungan = " ".join(text_lines)
 
-    # Pola: nama mapel lalu nilai
+    # Pola: nama pelajaran lalu nilai
     pattern = r'([A-Za-z\s\/\.\-]+?)\s*[:\-]?\s*([0-9]{2,3}[,.]?[0-9]{0,2})'
     matches = re.findall(pattern, gabungan)
 
     for mapel, nilai in matches:
-        # Bersihkan mapel
-        mapel = re.sub(r"^[\.\d\s]+", "", mapel)  # Hapus titik/angka di awal
-        mapel = re.sub(r"[^A-Za-z\s]", "", mapel)  # Hapus simbol aneh
+        mapel = re.sub(r"^[\.\d\s]+", "", mapel)              # Hapus awalan angka/titik
+        mapel = re.sub(r"[^A-Za-z\s]", "", mapel)             # Hapus simbol aneh
         mapel = mapel.strip().title()
 
-        # Filter jika bukan mapel (mengandung kata noise)
-        if any(k in mapel.lower() for k in ["rata", "tahun", "nama", "tempat", "lahir", "nip", "mei", "induk"]):
+        # Filter tambahan
+        if len(mapel.split()) < 2:
+            continue
+        if any(k in mapel.lower() for k in ["rata", "tahun", "nama", "lahir", "nip", "mei", "induk"]):
             continue
 
-        # Konversi nilai
         nilai = nilai.replace(",", ".")
         try:
             nilai_float = float(nilai)
-            if 10 <= nilai_float <= 100:  # Hanya nilai masuk akal
+            if 10 <= nilai_float <= 100:
                 hasil.append((mapel, nilai_float))
         except:
             continue
 
     return hasil
 
-# Main
 if uploaded_file:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
         tmp_file.write(uploaded_file.read())
