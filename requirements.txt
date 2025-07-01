@@ -1,7 +1,5 @@
 streamlit
-torch>=1.13.1
-transformers>=4.30.0
+easyocr
 opencv-python-headless
-Pillow
-sentencepiece
+
 
