@@ -1,35 +1,19 @@
 import streamlit as st
-import easyocr
+from transformers import DonutProcessor, VisionEncoderDecoderModel
+from PIL import Image
 import tempfile
-import re
+import torch
 
-st.title("📄 Ekstraksi Nilai Mata Pelajaran dari Ijazah")
+st.title("📄 Ekstraksi Nilai Mata Pelajaran dari Ijazah - Donut OCR")
 
 uploaded_file = st.file_uploader("Upload Gambar Ijazah (JPG/PNG)", type=["jpg", "jpeg", "png"])
 
-def clean_text_list(text_lines):
-    """Gabungkan teks OCR dan hilangkan noise kosong"""
-    return [t.strip() for t in text_lines if t.strip() != ""]
-
-def extract_mapel_nilai(text_lines):
-    hasil = []
-    gabungan = " ".join(text_lines)
-    
-    # Temukan pasangan teks diikuti angka (nama mapel dan nilai)
-    pattern = r'([A-Za-z\s\/\.\-]+?)\s*[:\-]?\s*([0-9]{2,3}[,.]?[0-9]{0,2})'
-    matches = re.findall(pattern, gabungan)
-
-    for mapel, nilai in matches:
-        mapel = mapel.strip().replace("  ", " ")
-        nilai = nilai.replace(",", ".").strip()
-        try:
-            float_nilai = float(nilai)
-            if 10 <= float_nilai <= 100:  # Filter nilai valid
-                hasil.append((mapel.title(), float_nilai))
-        except:
-            continue
-
-    return hasil
+@st.cache_resource
+def load_donut_model():
+    processor = DonutProcessor.from_pretrained("naver-clova-ix/donut-base-finetuned-docvqa")
+    model = VisionEncoderDecoderModel.from_pretrained("naver-clova-ix/donut-base-finetuned-docvqa")
+    model.eval()
+    return processor, model
 
 if uploaded_file:
     with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
@@ -37,17 +21,18 @@ if uploaded_file:
         file_path = tmp_file.name
 
     st.image(file_path, caption="Ijazah yang Diupload", use_column_width=True)
-    st.info("🔍 Sedang memproses gambar dengan OCR...")
+    st.info("🔍 Sedang memproses gambar dengan Donut OCR...")
 
-    reader = easyocr.Reader(['id'], gpu=False)
-    result = reader.readtext(file_path, detail=0)
-    cleaned = clean_text_list(result)
+    image = Image.open(file_path).convert("RGB")
 
-    nilai_terekstrak = extract_mapel_nilai(cleaned)
+    processor, model = load_donut_model()
+    task_prompt = "<s_docvqa><s_question>Daftar nilai mata pelajaran ijazah</s_question><s_answer>"
+    inputs = processor(image, task_prompt, return_tensors="pt")
 
-    st.subheader("📘 Nilai Mata Pelajaran Dikenali:")
-    if nilai_terekstrak:
-        for nama, nilai in nilai_terekstrak:
-            st.write(f"**{nama}** : {nilai}")
-    else:
-        st.warning("⚠️ Tidak ditemukan nilai mata pelajaran yang valid.")
+    with torch.no_grad():
+        outputs = model.generate(**inputs, max_length=512, num_beams=2)
+
+    output_text = processor.batch_decode(outputs, skip_special_tokens=True)[0]
+
+    st.subheader("📘 Hasil Ekstraksi Nilai (Donut OCR):")
+    st.write(output_text)
