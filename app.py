@@ -62,14 +62,20 @@ for jurusan in jurusan_list:
         if len(desc) < 5:
             continue
         embed = model.encode(desc)
-        jurusan_vectors.append(embed)
-        valid_jurusan.append(jurusan)
+        embed = np.array(embed, dtype='float32')
+        if embed.ndim == 1:
+            jurusan_vectors.append(embed)
+            valid_jurusan.append(jurusan)
     except Exception as e:
         continue
 
-jurusan_vectors = np.vstack(jurusan_vectors).astype('float32')
-index = faiss.IndexFlatL2(jurusan_vectors.shape[1])
-index.add(jurusan_vectors)
+if jurusan_vectors:
+    jurusan_vectors = np.vstack(jurusan_vectors).astype('float32')
+    index = faiss.IndexFlatL2(jurusan_vectors.shape[1])
+    index.add(jurusan_vectors)
+else:
+    st.error("Gagal memproses data jurusan. Tidak ada deskripsi yang valid.")
+    st.stop()
 
 # --- 4. Proses Input Siswa dan Rekomendasi ---
 if uploaded_file:
@@ -100,6 +106,8 @@ if uploaded_file:
     diff = jurusan_vectors.shape[1] - combined_vector.shape[1]
     if diff > 0:
         combined_vector = np.pad(combined_vector, ((0, 0), (0, diff)), mode='constant')
+    elif diff < 0:
+        combined_vector = combined_vector[:, :jurusan_vectors.shape[1]]
 
     # Rekomendasi
     D, I = index.search(combined_vector, k=5)
