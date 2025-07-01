@@ -1,11 +1,7 @@
 streamlit
-easyocr
-sentence-transformers
-faiss-cpu
-requests
-beautifulsoup4
+torch>=1.13.1
+transformers>=4.30.0
 opencv-python-headless
-pymupdf
-docx2txt
-pdf2image 
-pillow
+Pillow
+sentencepiece
+
