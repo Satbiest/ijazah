@@ -17,7 +17,7 @@ st.title("🎓 Rekomendasi Jurusan Berdasarkan Minat dan Nilai Ijazah")
 # --- 1. Input dari Pengguna ---
 minat_user = st.text_area("Tulis minat, keahlian, atau hobi kamu:", "Saya suka menggambar dan komputer")
 
-uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah Anda (format: .jpg/.png)", type=["jpg", "png"])
+uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah Anda (format: .pdf/.docx)", type=["pdf", "docx"])
 
 # --- 2. Ambil Semua Data Jurusan dari PDDikti (Scrape Per Halaman) ---
 @st.cache_data(ttl=86400)
