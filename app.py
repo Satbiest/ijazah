@@ -17,17 +17,20 @@ st.title("🎓 Rekomendasi Jurusan Berdasarkan Minat dan Nilai Ijazah")
 # --- 1. Input dari Pengguna ---
 minat_user = st.text_area("Tulis minat, keahlian, atau hobi kamu:", "Saya suka menggambar dan komputer")
 
-uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah Anda (format: .pdf/.docx)", type=["pdf", "docx"])
+uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah Anda (format: .jpg/.png)", type=["jpg", "png"])
 
 # --- 2. Ambil Semua Data Jurusan dari PDDikti (Scrape Per Halaman) ---
 @st.cache_data(ttl=86400)
 def scrape_jurusan_all():
     base_url = "https://pddikti.kemdiktisaintek.go.id/program-studi?page="
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+    }
     all_data = []
 
-    for page in range(1, 1000):
+    for page in range(1, 20):  # Batasi sampai 20 halaman dulu
         url = f"{base_url}{page}"
-        r = requests.get(url)
+        r = requests.get(url, headers=headers)
         soup = BeautifulSoup(r.text, "html.parser")
         items = soup.find_all("div", class_="card-body")
 
@@ -45,6 +48,8 @@ def scrape_jurusan_all():
     return all_data
 
 jurusan_list = scrape_jurusan_all()
+st.write(f"Jumlah jurusan berhasil diambil: {len(jurusan_list)}")
+st.json(jurusan_list[:5])
 
 # --- 3. Load NLP Model & Proses Jurusan ke Vector ---
 @st.cache_resource
