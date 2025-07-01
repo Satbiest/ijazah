@@ -7,26 +7,27 @@ st.title("📄 Ekstraksi Nilai Mata Pelajaran dari Ijazah")
 
 uploaded_file = st.file_uploader("Upload Gambar Ijazah (JPG/PNG)", type=["jpg", "jpeg", "png"])
 
-def extract_mapel_nilai(lines):
-    hasil = []
-    prev_text = ""
+def clean_text_list(text_lines):
+    """Gabungkan teks OCR dan hilangkan noise kosong"""
+    return [t.strip() for t in text_lines if t.strip() != ""]
 
-    for line in lines:
-        # Ubah koma jadi titik agar mudah dibaca sebagai float
-        clean_line = line.replace(",", ".")
-        
-        # Cari nilai (angka 2-3 digit, opsional dengan desimal)
-        nilai_match = re.findall(r'\b([0-9]{2,3}(?:\.[0-9]{1,2})?)\b', clean_line)
-        
-        if nilai_match:
-            for nilai in nilai_match:
-                # Ambil teks sebelumnya sebagai nama mapel (jika masuk akal)
-                nama_mapel = prev_text.strip()
-                if nama_mapel and len(nama_mapel) >= 3 and not nama_mapel.isdigit():
-                    hasil.append((nama_mapel, float(nilai)))
-        else:
-            # Simpan baris sebelumnya jika bukan nilai
-            prev_text = clean_line
+def extract_mapel_nilai(text_lines):
+    hasil = []
+    gabungan = " ".join(text_lines)
+    
+    # Temukan pasangan teks diikuti angka (nama mapel dan nilai)
+    pattern = r'([A-Za-z\s\/\.\-]+?)\s*[:\-]?\s*([0-9]{2,3}[,.]?[0-9]{0,2})'
+    matches = re.findall(pattern, gabungan)
+
+    for mapel, nilai in matches:
+        mapel = mapel.strip().replace("  ", " ")
+        nilai = nilai.replace(",", ".").strip()
+        try:
+            float_nilai = float(nilai)
+            if 10 <= float_nilai <= 100:  # Filter nilai valid (10–100)
+                hasil.append((mapel.title(), float_nilai))
+        except:
+            continue
 
     return hasil
 
@@ -38,18 +39,18 @@ if uploaded_file:
     st.image(file_path, caption="Ijazah yang Diupload", use_column_width=True)
     st.info("🔍 Sedang memproses gambar dengan OCR...")
 
-    reader = easyocr.Reader(['id'])
+    reader = easyocr.Reader(['id'], gpu=False)
     result = reader.readtext(file_path, detail=0)
+    cleaned = clean_text_list(result)
 
-    st.subheader("📜 Hasil Teks OCR (Mentah):")
-    st.write(result)
+    st.subheader("📜 Hasil Teks Mentah OCR:")
+    st.write(cleaned)
 
-    nilai_terekstrak = extract_mapel_nilai(result)
+    nilai_terekstrak = extract_mapel_nilai(cleaned)
 
+    st.subheader("📘 Nilai Mata Pelajaran Dikenali:")
     if nilai_terekstrak:
-        st.success("📘 Nilai Mata Pelajaran yang Terdeteksi:")
         for nama, nilai in nilai_terekstrak:
-            st.write(f"{nama} : {nilai}")
+            st.write(f"**{nama}** : {nilai}")
     else:
-        st.warning("⚠️ Tidak ditemukan nilai mata pelajaran yang bisa dikenali.")
-
+        st.warning("⚠️ Tidak ditemukan nilai mata pelajaran yang valid.")
