@@ -7,7 +7,7 @@ import re
 
 st.title("📄 Pembaca Nilai dari Ijazah")
 
-uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah (format: PDF/DOCX)", type=["pdf", "docx])
+uploaded_file = st.file_uploader("Upload Foto/Scan Ijazah (format: .pdf/.docx)", type=["pdf", "docx])
 
 if uploaded_file:
     with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
