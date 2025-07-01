@@ -24,7 +24,7 @@ def extract_mapel_nilai(text_lines):
         nilai = nilai.replace(",", ".").strip()
         try:
             float_nilai = float(nilai)
-            if 10 <= float_nilai <= 100:  # Filter nilai valid (10–100)
+            if 10 <= float_nilai <= 100:  # Filter nilai valid
                 hasil.append((mapel.title(), float_nilai))
         except:
             continue
@@ -42,9 +42,6 @@ if uploaded_file:
     reader = easyocr.Reader(['id'], gpu=False)
     result = reader.readtext(file_path, detail=0)
     cleaned = clean_text_list(result)
-
-    st.subheader("📜 Hasil Teks Mentah OCR:")
-    st.write(cleaned)
 
     nilai_terekstrak = extract_mapel_nilai(cleaned)
 
