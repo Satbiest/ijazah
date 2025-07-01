@@ -1,52 +1,36 @@
+# app.py
 import streamlit as st
 import easyocr
-import tempfile
-import numpy as np
 import re
-from pdf2image import convert_from_path
-import os
+import tempfile
 
-st.title("📄 Ekstraksi Nilai dari Ijazah PDF/Gambar")
+st.title("📄 Ekstraksi Nilai Ijazah (Gambar)")
 
-uploaded_file = st.file_uploader("Upload Ijazah (PDF/Gambar)", type=["pdf", "jpg", "png"])
-
-reader = easyocr.Reader(['id'])
-
-def extract_text_from_image(path):
-    result = reader.readtext(path, detail=0)
-    return "\n".join(result)
-
-def extract_text_from_pdf(path):
-    # Konversi semua halaman PDF ke gambar
-    images = convert_from_path(path)
-    text_result = []
-    for page_img in images:
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_img_file:
-            page_img.save(temp_img_file.name, "JPEG")
-            ocr_result = extract_text_from_image(temp_img_file.name)
-            text_result.append(ocr_result)
-    return "\n".join(text_result)
+uploaded_file = st.file_uploader("Upload Gambar Ijazah (JPG/PNG)", type=["jpg", "jpeg", "png"])
 
 if uploaded_file:
-    with tempfile.NamedTemporaryFile(delete=False) as tmp:
-        tmp.write(uploaded_file.read())
-        file_path = tmp.name
+    # Simpan gambar sementara
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as tmp_file:
+        tmp_file.write(uploaded_file.read())
+        image_path = tmp_file.name
 
+    st.image(image_path, caption="Ijazah yang Diupload", use_column_width=True)
     st.info("🔍 Sedang memproses teks dengan OCR...")
 
-    if uploaded_file.name.endswith(".pdf"):
-        text = extract_text_from_pdf(file_path)
-    else:
-        text = extract_text_from_image(file_path)
+    # Proses OCR
+    reader = easyocr.Reader(['id'])
+    result = reader.readtext(image_path, detail=0)
+    
+    # Tampilkan hasil teks
+    st.subheader("📝 Teks yang berhasil diekstrak:")
+    st.write("\n".join(result))
 
-    st.text_area("📄 Teks yang berhasil diekstrak:", text, height=300)
-
-    # Ekstraksi nilai mapel
+    # Ekstrak nilai pelajaran
     nilai_mapel = {}
-    for line in text.splitlines():
+    for line in result:
         match = re.search(r'(Matematika|Fisika|Kimia|Biologi|B\.?Indonesia|B\.?Inggris)[^0-9]*([0-9]{2,3})', line, re.IGNORECASE)
         if match:
-            mapel = match.group(1).replace('.', '').strip()
+            mapel = match.group(1).replace(".", "").strip()
             nilai = int(match.group(2))
             nilai_mapel[mapel] = nilai
 
